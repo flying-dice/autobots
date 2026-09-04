@@ -1,0 +1,35 @@
+{
+  "name": "@flying-dice/autobots",
+  "version": "0.1.0",
+  "description": "Home of the Autobots agent team, and a CLI to install them into Claude Code, Codex, Antigravity and Pi.",
+  "type": "module",
+  "bin": {
+    "autobots": "./src/bin.ts"
+  },
+  "files": [
+    "src",
+    "autobots",
+    "skills",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "bun src/bin.ts",
+    "build": "bun scripts/build.ts",
+    "release": "bun scripts/release.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit",
+    "smoke:tarball": "bun scripts/smoke-tarball.ts"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.6.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flying-dice/autobots.git"
+  }
+}

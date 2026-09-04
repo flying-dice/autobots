@@ -1,0 +1,8 @@
+# Drop into ~/.codex/config.toml (or .codex/config.toml in a trusted project).
+# Optimus dispatches from the primary session; one level of nesting is all the
+# team needs, and it keeps token use bounded.
+[agents]
+max_depth = 1
+max_concurrent_threads_per_session = 4
+default_subagent_model = "gpt-5.6-terra"
+default_subagent_reasoning_effort = "medium"
