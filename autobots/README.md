@@ -12,15 +12,15 @@ Or make it the project default in `.claude/settings.json` (see `settings.example
 
 ## Roster
 
-| Agent | Model | Effort | Role |
-|---|---|---|---|
-| optimus-prime | fable | low | Tech lead — roadmap, sprints, decisions, all dispatch |
-| bumblebee / bumblebee-lite | sonnet | medium / low | Developer |
-| ironhide / ironhide-deep | opus | medium / high | Senior developer |
-| ratchet / ratchet-deep | opus | medium / high | Tester |
-| arcee | opus | medium | Designer |
-| prowl / prowl-deep | fable | low / high | Architect (read-only) |
-| jazz / jazz-deep | fable | low / high | Lead designer (design docs only) |
+| | Agent | Model | Effort | Role |
+|:---:|---|---|---|---|
+| <img src="../assets/avatars/optimus-prime.jpg" width="60" alt="Optimus Prime" /> | **optimus-prime** | fable | low | Tech lead — roadmap, sprints, decisions, all dispatch |
+| <img src="../assets/avatars/bumblebee.jpg" width="60" alt="Bumblebee" /> | **bumblebee** / bumblebee-lite | sonnet | medium / low | Developer |
+| <img src="../assets/avatars/ironhide.jpg" width="60" alt="Ironhide" /> | **ironhide** / ironhide-deep | opus | medium / high | Senior developer |
+| <img src="../assets/avatars/ratchet.jpg" width="60" alt="Ratchet" /> | **ratchet** / ratchet-deep | opus | medium / high | Tester |
+| <img src="../assets/avatars/arcee.jpg" width="60" alt="Arcee" /> | **arcee** | opus | medium | Designer |
+| <img src="../assets/avatars/prowl.jpg" width="60" alt="Prowl" /> | **prowl** / prowl-deep | fable | low / high | Architect (read-only) |
+| <img src="../assets/avatars/jazz.jpg" width="60" alt="Jazz" /> | **jazz** / jazz-deep | fable | low / high | Lead designer (design docs only) |
 
 `-deep` Fable variants may only be dispatched with a written justification (three criteria in Optimus's prompt).
 

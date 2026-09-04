@@ -11,15 +11,15 @@ it to whatever each harness expects.
 Optimus Prime runs the session and is the only agent that dispatches work. Everyone
 else is a subagent he briefs. Full team notes are in [`autobots/README.md`](autobots/README.md).
 
-| Autobot | Model / effort | Role |
-| --- | --- | --- |
-| optimus-prime | fable / low | Tech lead: roadmap, sprints, decisions, all dispatch |
-| bumblebee, bumblebee-lite | sonnet / medium, low | Developer |
-| ironhide, ironhide-deep | opus / medium, high | Senior developer |
-| ratchet, ratchet-deep | opus / medium, high | Tester |
-| arcee | opus / medium | Designer |
-| prowl, prowl-deep | fable / low, high | Architect (read-only) |
-| jazz, jazz-deep | fable / low, high | Lead designer (design docs only) |
+| | Autobot | Model / effort | Role |
+| :---: | --- | --- | --- |
+| <img src="assets/avatars/optimus-prime.jpg" width="60" alt="Optimus Prime" /> | **optimus-prime** | fable / low | Tech lead: roadmap, sprints, decisions, all dispatch |
+| <img src="assets/avatars/bumblebee.jpg" width="60" alt="Bumblebee" /> | **bumblebee**, bumblebee-lite | sonnet / medium, low | Developer |
+| <img src="assets/avatars/ironhide.jpg" width="60" alt="Ironhide" /> | **ironhide**, ironhide-deep | opus / medium, high | Senior developer |
+| <img src="assets/avatars/ratchet.jpg" width="60" alt="Ratchet" /> | **ratchet**, ratchet-deep | opus / medium, high | Tester |
+| <img src="assets/avatars/arcee.jpg" width="60" alt="Arcee" /> | **arcee** | opus / medium | Designer |
+| <img src="assets/avatars/prowl.jpg" width="60" alt="Prowl" /> | **prowl**, prowl-deep | fable / low, high | Architect (read-only) |
+| <img src="assets/avatars/jazz.jpg" width="60" alt="Jazz" /> | **jazz**, jazz-deep | fable / low, high | Lead designer (design docs only) |
 
 In Claude Code, start a session with `claude --agent optimus-prime`, or copy
 `examples/claude-settings.example.json` to `.claude/settings.json` to make him the
