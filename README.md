@@ -82,8 +82,8 @@ bun src/bin.ts list                       # from a checkout
 | `show <bot>` | Print one Autobot's definition |
 | `harnesses` | Show supported harnesses and the paths they use |
 | `doctor` | Detect which harnesses are installed on this machine |
-| `install <bot...>` / `install --all` | Install into the given harness and scope. `--all` includes the shared skills |
-| `uninstall <bot...>` / `uninstall --all` | Remove the files the CLI wrote |
+| `install <bot...>` / `install --all` | Install into the given harness and scope. `--all` includes the shared skills and prunes anything this version no longer ships |
+| `uninstall <bot...>` / `uninstall --all` | Remove the files the CLI wrote, per the manifest |
 | `status` | Table of which Autobots are installed in which harness |
 
 Options:
@@ -92,6 +92,24 @@ Options:
 - `-S, --scope user|project` (required) home directory config or the current directory
 - `-n, --dry-run` print what would change without touching disk
 - `-s, --skills` include the shared skills (implied by `--all`)
+
+## Upgrades and the manifest
+
+Every install writes `autobots-manifest.json` at the harness's scope root
+(`~/.claude/`, `~/.codex/`, or the project's `.claude/` and `.codex/`). It
+records the CLI version and, per bot and skill, the exact paths written. That
+record is what makes upgrades safe:
+
+- Reinstalling a bot removes any path it owned before but no longer produces,
+  such as a renamed skill directory.
+- `install --all` also removes every bot or skill in the manifest that the new
+  version no longer ships, so retiring an Autobot upstream retires it on your
+  machine on the next run.
+- Installing bots by name never prunes the others.
+- `uninstall` removes what the manifest recorded, plus whatever the current plan
+  would write, so it works even if the layout changed between versions.
+- `status` shows which CLI version last wrote each harness. `--dry-run` reports
+  prunes without touching the manifest.
 
 ## How each harness is adapted
 

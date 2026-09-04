@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { findAutobots } from "./autobots.ts";
 import { HARNESSES, HARNESS_IDS, resolveHarnesses } from "./harnesses/index.ts";
-import { install, uninstall, status, installSkill, uninstallSkill, skillStatus } from "./install.ts";
+import { install, uninstall, status, botItem, skillItem, readManifest, manifestPath, type Item } from "./install.ts";
 import type { Autobot, Catalog, Scope } from "./types.ts";
 
 export const RELEASE_URL = "https://github.com/flying-dice/autobots/releases/latest/download/autobots.ts";
@@ -13,9 +13,9 @@ Usage:
   autobots skills                       Show the shared skills in this repo
   autobots harnesses                    Show supported harnesses and where they are detected
   autobots install <bot...> [options]   Install Autobots into a harness
-  autobots install --all [options]      Install every Autobot and every shared skill
+  autobots install --all [options]      Install every Autobot and shared skill; prunes anything this version no longer ships
   autobots uninstall <bot...> [options] Remove Autobots from a harness
-  autobots status [options]             Show what is installed where
+  autobots status [options]             Show what is installed where, and the manifest's recorded version
   autobots doctor                       Detect which harnesses are present on this machine
   autobots show <bot>                   Print an Autobot definition
 
@@ -159,40 +159,39 @@ export function main(argv: string[], rt: Runtime) {
       const { harnesses: targets, scope } = requireTarget(args);
       const chosen = pickBots(args, bots);
       const skills = args.all || args.skills ? sharedSkills : [];
-      const opts = { scope, cwd, dryRun: args.dryRun };
+      const items: Item[] = [...skills.map(skillItem), ...chosen.map(botItem)];
+      const opts = { scope, cwd, dryRun: args.dryRun, version: rt.version };
       const installing = args.cmd === "install";
       for (const h of targets) {
         console.log(`\n${h.label} (${scope})`);
-        for (const sk of skills) {
-          const a = installing ? installSkill(sk, h, opts) : uninstallSkill(sk, h, opts);
-          if (a) console.log(`  ${args.dryRun ? "would " : ""}${a.kind.padEnd(9)} ${("skill:" + sk.name).padEnd(24)} ${a.path}`);
-        }
-        for (const b of chosen) {
-          const actions = installing ? install(b, h, opts) : uninstall(b, h, opts);
+        const results = installing ? install(items, h, opts, args.all) : uninstall(items, h, opts);
+        for (const [key, actions] of results) {
           if (actions.length === 0) {
-            console.log(`  ${b.name}: nothing to do`);
+            console.log(`  ${key}: nothing to do`);
             continue;
           }
           for (const a of actions) {
-            console.log(`  ${args.dryRun ? "would " : ""}${a.kind.padEnd(9)} ${b.name.padEnd(24)} ${a.path}`);
+            console.log(`  ${args.dryRun ? "would " : ""}${a.kind.padEnd(9)} ${key.padEnd(24)} ${a.path}`);
           }
         }
+        if (!args.dryRun) console.log(`  manifest  ${manifestPath(h, scope, cwd)}`);
       }
       return;
     }
     case "status": {
       const { harnesses: targets, scope } = requireTarget(args);
-      console.log(`scope: ${scope}${scope === "project" ? ` (${cwd})` : ""}\n`);
-      const names = [...bots.map((b) => b.name), ...sharedSkills.map((s) => "skill:" + s.name)];
-      const w = Math.max(4, ...names.map((n) => n.length));
-      console.log(`${"name".padEnd(w)}  ${targets.map((h) => h.id.padEnd(11)).join(" ")}`);
-      for (const b of bots) {
-        const cells = targets.map((h) => status(b, h, scope, cwd).padEnd(11));
-        console.log(`${b.name.padEnd(w)}  ${cells.join(" ")}`);
+      console.log(`scope: ${scope}${scope === "project" ? ` (${cwd})` : ""}   cli: ${rt.version}`);
+      for (const h of targets) {
+        const m = readManifest(h, scope, cwd);
+        console.log(`${h.id}: ${m.version ? `installed by ${m.version} at ${m.updatedAt}` : "no manifest"}`);
       }
-      for (const sk of sharedSkills) {
-        const cells = targets.map((h) => skillStatus(sk, h, scope, cwd).padEnd(11));
-        console.log(`${("skill:" + sk.name).padEnd(w)}  ${cells.join(" ")}`);
+      console.log();
+      const items: Item[] = [...bots.map(botItem), ...sharedSkills.map(skillItem)];
+      const w = Math.max(4, ...items.map((i) => i.key.length));
+      console.log(`${"item".padEnd(w)}  ${targets.map((h) => h.id.padEnd(11)).join(" ")}`);
+      for (const it of items) {
+        const cells = targets.map((h) => status(it, h, scope, cwd).padEnd(11));
+        console.log(`${it.key.padEnd(w)}  ${cells.join(" ")}`);
       }
       return;
     }

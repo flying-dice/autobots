@@ -6,7 +6,7 @@ import { parseFrontmatter, stringifyFrontmatter } from "../src/frontmatter.ts";
 import { loadAutobots, loadCatalog } from "../src/autobots.ts";
 import { readTree, children, type Tree } from "../src/tree.ts";
 import { HARNESSES, HARNESS_IDS, resolveHarnesses } from "../src/harnesses/index.ts";
-import { install, uninstall, status, installSkill, uninstallSkill, skillStatus } from "../src/install.ts";
+import { install, uninstall, status, botItem, skillItem, readManifest, manifestPath } from "../src/install.ts";
 
 const REPO = resolve(import.meta.dir, "..");
 const catalog = loadCatalog(readTree(REPO));
@@ -59,43 +59,84 @@ describe("harnesses", () => {
     expect(() => resolveHarnesses("cursor")).toThrow();
   });
 
+  const opts = (cwd: string, dryRun = false) => ({ scope: "project" as const, cwd, dryRun, version: "9.9.9" });
+
   for (const id of HARNESS_IDS) {
     test(`${id}: install, status, uninstall (project scope)`, () => {
       const [bot] = loadAutobots(fixtureTree());
+      const item = botItem(bot);
       const cwd = mkdtempSync(join(tmpdir(), "proj-"));
       const h = HARNESSES[id];
-      const opts = { scope: "project" as const, cwd, dryRun: false };
-      expect(status(bot, h, "project", cwd)).toBe("missing");
-      expect(install(bot, h, opts).length).toBe(2);
+      expect(status(item, h, "project", cwd)).toBe("missing");
+      expect(install([item], h, opts(cwd)).get(item.key)!.length).toBe(2);
       for (const p of h.ownedPaths(bot, "project", cwd)) expect(existsSync(p)).toBe(true);
       expect(existsSync(join(h.skillsRoot("project", cwd), "roll-out", "ref", "notes.md"))).toBe(true);
-      expect(status(bot, h, "project", cwd)).toBe("installed");
+      expect(status(item, h, "project", cwd)).toBe("installed");
       const main = readFileSync(h.plan(bot, "project", cwd).files[0].path, "utf8");
       expect(main).toContain("You are Optimus.");
       expect(main).toContain("Leads the team");
-      expect(install(bot, h, opts)[0].kind).toBe("unchanged");
-      uninstall(bot, h, opts);
-      expect(status(bot, h, "project", cwd)).toBe("missing");
+      expect(install([item], h, opts(cwd)).get(item.key)![0].kind).toBe("unchanged");
+      const m = readManifest(h, "project", cwd);
+      expect(m.version).toBe("9.9.9");
+      expect(m.items[item.key]).toEqual(h.ownedPaths(bot, "project", cwd));
+      uninstall([item], h, opts(cwd));
+      expect(status(item, h, "project", cwd)).toBe("missing");
+      expect(readManifest(h, "project", cwd).items).toEqual({});
     });
 
     test(`${id}: shared skill install/uninstall`, () => {
       const cwd = mkdtempSync(join(tmpdir(), "proj-"));
       const h = HARNESSES[id];
-      const opts = { scope: "project" as const, cwd, dryRun: false };
-      const skill = catalog.skills[0];
-      installSkill(skill, h, opts);
-      expect(skillStatus(skill, h, "project", cwd)).toBe("installed");
-      expect(existsSync(join(h.skillsRoot("project", cwd), skill.name, "SKILL.md"))).toBe(true);
-      uninstallSkill(skill, h, opts);
-      expect(skillStatus(skill, h, "project", cwd)).toBe("missing");
+      const item = skillItem(catalog.skills[0]);
+      install([item], h, opts(cwd));
+      expect(status(item, h, "project", cwd)).toBe("installed");
+      expect(existsSync(join(h.skillsRoot("project", cwd), catalog.skills[0].name, "SKILL.md"))).toBe(true);
+      uninstall([item], h, opts(cwd));
+      expect(status(item, h, "project", cwd)).toBe("missing");
     });
   }
 
-  test("dry run touches nothing", () => {
+  test("dry run touches nothing, not even the manifest", () => {
     const [bot] = loadAutobots(fixtureTree());
     const cwd = mkdtempSync(join(tmpdir(), "proj-"));
-    install(bot, HARNESSES.claude, { scope: "project", cwd, dryRun: true });
-    expect(status(bot, HARNESSES.claude, "project", cwd)).toBe("missing");
+    install([botItem(bot)], HARNESSES.claude, opts(cwd, true));
+    expect(status(botItem(bot), HARNESSES.claude, "project", cwd)).toBe("missing");
+    expect(existsSync(manifestPath(HARNESSES.claude, "project", cwd))).toBe(false);
+  });
+
+  test("upgrading removes what the new version no longer writes", () => {
+    const h = HARNESSES.claude;
+    const cwd = mkdtempSync(join(tmpdir(), "proj-"));
+    const v1 = loadCatalog(fixtureTree());
+    install([...v1.skills.map(skillItem), ...v1.autobots.map(botItem)], h, { ...opts(cwd), version: "1.0.0" }, true);
+    const sharedOne = join(h.skillsRoot("project", cwd), "shared-one");
+    const rollOut = join(h.skillsRoot("project", cwd), "roll-out");
+    expect(existsSync(sharedOne)).toBe(true);
+    expect(existsSync(rollOut)).toBe(true);
+
+    // v2: the shared skill is gone, the bot's skill was renamed, a new bot appeared.
+    const tree = fixtureTree();
+    delete tree["skills/shared-one/SKILL.md"];
+    delete tree["autobots/optimus/skills/roll-out/SKILL.md"];
+    delete tree["autobots/optimus/skills/roll-out/ref/notes.md"];
+    tree["autobots/optimus/skills/transform/SKILL.md"] = "---\nname: transform\n---\nGo.\n";
+    tree["autobots/bumblebee/AUTOBOT.md"] = "---\nname: bumblebee\ndescription: Dev\n---\n\nBee.\n";
+    const v2 = loadCatalog(tree);
+    const results = install([...v2.skills.map(skillItem), ...v2.autobots.map(botItem)], h, { ...opts(cwd), version: "2.0.0" }, true);
+
+    expect(existsSync(sharedOne)).toBe(false);
+    expect(existsSync(rollOut)).toBe(false);
+    expect(existsSync(join(h.skillsRoot("project", cwd), "transform", "SKILL.md"))).toBe(true);
+    expect(existsSync(join(cwd, ".claude/agents/autobots/bumblebee.md"))).toBe(true);
+    expect(results.get("skill:shared-one")!.map((a) => a.kind)).toEqual(["prune"]);
+    expect(results.get("bot:optimus")!.map((a) => a.kind)).toEqual(["prune", "unchanged", "copy"]);
+    const m = readManifest(h, "project", cwd);
+    expect(m.version).toBe("2.0.0");
+    expect(Object.keys(m.items).sort()).toEqual(["bot:bumblebee", "bot:optimus"]);
+
+    // Installing one bot by name never prunes the others.
+    install([botItem(v2.autobots[0])], h, { ...opts(cwd), version: "2.0.1" });
+    expect(Object.keys(readManifest(h, "project", cwd).items).sort()).toEqual(["bot:bumblebee", "bot:optimus"]);
   });
 });
 
